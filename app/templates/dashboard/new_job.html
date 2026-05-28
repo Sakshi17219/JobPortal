@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Post a Job — JobPortal{% endblock %}
+{% block breadcrumb %}
+<span class="text-xs text-slate-500">Admin</span>
+<span class="text-xs text-slate-600 mx-1">/</span>
+<span class="text-xs text-slate-500">Post Job</span>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-xl font-semibold text-white">Post a New Job</h1>
+    <p class="text-sm text-slate-500 mt-0.5">Fill in the details to list a new position.</p>
+  </div>
+
+  <div class="glass-card rounded-2xl p-7">
+    <form method="POST" class="space-y-5">
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2">
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Job Title</label>
+          <input type="text" name="title" required placeholder="e.g. Senior Backend Engineer" class="input-field"/>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Company</label>
+          <input type="text" name="company" required placeholder="e.g. Stripe" class="input-field"/>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Location</label>
+          <input type="text" name="location" placeholder="e.g. Remote or San Francisco, CA" class="input-field"/>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Job Type</label>
+          <select name="job_type" class="input-field">
+            <option value="Full-time">Full-time</option>
+            <option value="Remote">Remote</option>
+            <option value="Hybrid">Hybrid</option>
+            <option value="Contract">Contract</option>
+            <option value="Part-time">Part-time</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Salary Range (USD / yr)</label>
+          <div class="flex gap-2">
+            <input type="number" name="salary_min" placeholder="Min" class="input-field"/>
+            <input type="number" name="salary_max" placeholder="Max" class="input-field"/>
+          </div>
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">
+            Skills / Tags
+            <span class="text-slate-600 font-normal ml-1">(comma separated — used for AI matching)</span>
+          </label>
+          <input type="text" name="tags" placeholder="Python, Flask, React, PostgreSQL, Docker" class="input-field"/>
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Job Description</label>
+          <textarea name="description" rows="4" placeholder="Describe the role, team, and impact…" class="input-field resize-none"></textarea>
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">
+            Requirements
+            <span class="text-slate-600 font-normal ml-1">(one per line)</span>
+          </label>
+          <textarea name="requirements" rows="4" placeholder="5+ years backend experience&#10;Python or Go proficiency&#10;Experience with distributed systems" class="input-field resize-none font-mono text-xs"></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 pt-2">
+        <button type="submit" class="btn-primary px-6 py-2.5">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+          Publish Job
+        </button>
+        <a href="{{ url_for('main.admin_dashboard') }}" class="btn-ghost px-6 py-2.5">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

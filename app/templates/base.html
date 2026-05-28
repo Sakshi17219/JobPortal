@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}JobPortal{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['DM Sans', 'sans-serif'], mono: ['DM Mono', 'monospace'] },
+          colors: {
+            slate: { 950: '#0a0f1e', 900: '#0f172a', 850: '#131f35', 800: '#1e293b', 700: '#334155', 600: '#475569', 500: '#64748b', 400: '#94a3b8', 300: '#cbd5e1' },
+            blue: { 600: '#3182ce', 500: '#4299e1', 400: '#63b3ed' },
+            emerald: { 500: '#10b981', 400: '#34d399' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+
+    /* ── Dark/Light mode vars ── */
+    :root {
+      --bg: #0a0f1e; --bg2: #0f172a; --bg3: #131f35;
+      --border: rgba(255,255,255,0.07); --text: #e2e8f0;
+      --text2: #94a3b8; --text3: #475569;
+      --card-bg: rgba(19,31,53,0.85); --card-hover: rgba(30,41,59,0.95);
+      --topbar: rgba(10,15,30,0.88); --sidebar-bg: rgba(10,15,30,0.92);
+    }
+    body.light {
+      --bg: #f1f5f9; --bg2: #e2e8f0; --bg3: #f8fafc;
+      --border: rgba(0,0,0,0.09); --text: #0f172a;
+      --text2: #475569; --text3: #94a3b8;
+      --card-bg: rgba(255,255,255,0.92); --card-hover: rgba(241,245,249,0.98);
+      --topbar: rgba(248,250,252,0.92); --sidebar-bg: rgba(255,255,255,0.96);
+    }
+
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; transition: background 0.2s, color 0.2s; }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg2); }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+    .glass {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+    }
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      transition: all 0.25s cubic-bezier(0.4,0,0.2,1);
+    }
+    .glass-card:hover {
+      border-color: rgba(49,130,206,0.4);
+      background: var(--card-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15), 0 0 0 1px rgba(49,130,206,0.2);
+    }
+    .sidebar-link {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px; border-radius: 8px;
+      color: var(--text2); font-size: 14px; font-weight: 500;
+      transition: all 0.15s; text-decoration: none;
+    }
+    .sidebar-link:hover, .sidebar-link.active {
+      background: rgba(49,130,206,0.12);
+      color: var(--text);
+    }
+    .sidebar-link.active { color: #63b3ed; border-left: 2px solid #3182ce; padding-left: 12px; }
+    .sidebar-link svg { flex-shrink: 0; }
+
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 2px 8px; border-radius: 4px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.03em;
+    }
+    .badge-blue { background: rgba(49,130,206,0.15); color: #63b3ed; border: 1px solid rgba(49,130,206,0.3); }
+    .badge-green { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+    .badge-yellow { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+    .badge-red { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+    .badge-gray { background: rgba(100,116,139,0.15); color: #94a3b8; border: 1px solid rgba(100,116,139,0.25); }
+
+    .btn-primary {
+      background: #3182ce; color: #fff; border: none;
+      padding: 8px 18px; border-radius: 8px; font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: all 0.15s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-primary:hover { background: #2b6cb0; box-shadow: 0 0 0 2px rgba(49,130,206,0.3); }
+    .btn-ghost {
+      background: transparent; border: 1px solid rgba(255,255,255,0.1);
+      color: #94a3b8; padding: 8px 18px; border-radius: 8px; font-size: 14px;
+      cursor: pointer; transition: all 0.15s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.2); color: #e2e8f0; }
+
+    .input-field {
+      background: var(--bg2); border: 1px solid var(--border);
+      color: var(--text); border-radius: 8px; padding: 9px 14px; font-size: 14px;
+      font-family: 'DM Sans', sans-serif; outline: none; width: 100%;
+      transition: border-color 0.15s;
+    }
+    .input-field:focus { border-color: #3182ce; box-shadow: 0 0 0 3px rgba(49,130,206,0.15); }
+    .input-field::placeholder { color: var(--text3); }
+
+    .score-ring { transition: stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1); }
+
+    /* Slide-over panel */
+    .slide-over {
+      position: fixed; top: 0; right: 0; height: 100vh; width: 520px;
+      z-index: 50; transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+      background: #0f172a; border-left: 1px solid rgba(255,255,255,0.07);
+      overflow-y: auto;
+    }
+    .slide-over.open { transform: translateX(0); }
+    .slide-over-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 40; opacity: 0; pointer-events: none;
+      transition: opacity 0.3s;
+    }
+    .slide-over-overlay.open { opacity: 1; pointer-events: all; }
+
+    /* Activity feed */
+    .activity-item { animation: slideIn 0.3s ease; }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Status stepper */
+    .step-active .step-dot { background: #3182ce; box-shadow: 0 0 0 4px rgba(49,130,206,0.2); }
+    .step-done .step-dot { background: #10b981; }
+    .step-pending .step-dot { background: #334155; }
+
+    /* Grid background */
+    .grid-bg {
+      background-image: linear-gradient(rgba(49,130,206,0.03) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(49,130,206,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .topbar-blur {
+      position: sticky; top: 0; z-index: 30;
+      background: var(--topbar);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    select.input-field option { background: var(--bg2); }
+
+    /* ── SIDEBAR: fixed 240px, never overlaps ── */
+    .sidebar {
+      width: 240px;
+      background: var(--sidebar-bg);
+    }
+    .main-content {
+      margin-left: 240px;
+      min-width: 0;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); transition: transform 0.3s; }
+      .sidebar.mobile-open { transform: translateX(0); }
+      .main-content { margin-left: 0; }
+      .slide-over { width: 100vw; }
+      .mobile-menu-btn { display: flex !important; }
+    }
+    @media (min-width: 769px) {
+      .sidebar { transform: none !important; }
+      .mobile-menu-btn { display: none !important; }
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body class="grid-bg min-h-screen">
+
+{% if current_user.is_authenticated %}
+<!-- SIDEBAR -->
+<aside class="sidebar fixed left-0 top-0 h-screen glass border-r border-white/5 z-20 flex flex-col py-5 px-3" id="sidebar">
+  <!-- Logo -->
+  <div class="px-3 mb-6 flex items-center gap-2">
+    <div class="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M7 1L12 4v6l-5 3L2 10V4L7 1z" fill="white" fill-opacity="0.9"/>
+      </svg>
+    </div>
+    <span class="font-semibold text-sm text-white tracking-tight">JobPortal</span>
+  </div>
+
+  <nav class="flex flex-col gap-0.5 flex-1">
+    {% if current_user.role == 'admin' %}
+    <a href="{{ url_for('main.admin_dashboard') }}" class="sidebar-link {% if request.endpoint == 'main.admin_dashboard' %}active{% endif %}">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a href="{{ url_for('main.job_list') }}" class="sidebar-link {% if request.endpoint == 'main.job_list' %}active{% endif %}">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+      All Jobs
+    </a>
+    <a href="{{ url_for('main.new_job') }}" class="sidebar-link {% if request.endpoint == 'main.new_job' %}active{% endif %}">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+      Post Job
+    </a>
+    {% else %}
+    <a href="{{ url_for('main.seeker_dashboard') }}" class="sidebar-link {% if request.endpoint == 'main.seeker_dashboard' %}active{% endif %}">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a href="{{ url_for('main.job_list') }}" class="sidebar-link {% if request.endpoint == 'main.job_list' %}active{% endif %}">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Browse Jobs
+    </a>
+    <a href="{{ url_for('main.my_applications') }}" class="sidebar-link {% if request.endpoint == 'main.my_applications' %}active{% endif %}">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      My Applications
+    </a>
+    {% endif %}
+  </nav>
+
+  <!-- User profile -->
+  <div class="mt-auto pt-4 border-t border-white/5">
+    <div class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors">
+      <div class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+        {{ current_user.username[0].upper() }}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="text-xs font-medium text-white truncate">{{ current_user.username }}</div>
+        <div class="text-xs text-slate-500 truncate">{{ current_user.role }}</div>
+      </div>
+    </div>
+    <a href="{{ url_for('auth.logout') }}" class="sidebar-link mt-1 text-slate-500">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Sign out
+    </a>
+  </div>
+</aside>
+
+<div class="main-content">
+  <!-- TOP BAR -->
+  <header class="topbar-blur h-12 flex items-center px-4 gap-3">
+    <!-- Mobile hamburger -->
+    <button class="mobile-menu-btn hidden w-8 h-8 items-center justify-center rounded-lg hover:bg-white/5 text-slate-400" onclick="toggleSidebar()">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="flex-1 flex items-center gap-3">
+      {% block breadcrumb %}{% endblock %}
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- Dark/Light toggle -->
+      <button id="theme-toggle" onclick="toggleTheme()" title="Toggle theme"
+        class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors text-slate-400 hover:text-white">
+        <svg id="icon-moon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg id="icon-sun" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+      <!-- Notification bell -->
+      <button id="notif-btn" class="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors text-slate-400 hover:text-white">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span id="notif-dot" class="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-blue-500 hidden"></span>
+      </button>
+      <div class="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-xs font-bold text-white">
+        {{ current_user.username[0].upper() }}
+      </div>
+    </div>
+  </header>
+
+  <main class="p-6 min-h-screen">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+      <div class="mb-4 px-4 py-3 rounded-lg glass-card text-sm {% if cat == 'error' %}text-red-400 border-red-500/20{% else %}text-emerald-400 border-emerald-500/20{% endif %}">
+        {{ msg }}
+      </div>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+{% else %}
+<main>{% block auth_content %}{% endblock %}</main>
+{% endif %}
+
+<!-- SLIDE-OVER OVERLAY -->
+<div id="slide-overlay" class="slide-over-overlay" onclick="closeSlideOver()"></div>
+<!-- SLIDE-OVER PANEL -->
+<div id="slide-over" class="slide-over">
+  <div id="slide-over-body" class="p-6"></div>
+</div>
+
+<script>
+// ── Theme toggle ──
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  document.getElementById('icon-moon').style.display = isLight ? 'none' : '';
+  document.getElementById('icon-sun').style.display  = isLight ? '' : 'none';
+}
+// Apply saved theme on load
+(function() {
+  if (localStorage.getItem('theme') === 'light') {
+    document.body.classList.add('light');
+    document.getElementById('icon-moon').style.display = 'none';
+    document.getElementById('icon-sun').style.display  = '';
+  }
+})();
+
+// ── Mobile sidebar ──
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('mobile-open');
+}
+// Close sidebar when clicking overlay on mobile
+document.addEventListener('click', function(e) {
+  const sb = document.getElementById('sidebar');
+  if (sb && window.innerWidth <= 768 && !sb.contains(e.target) && !e.target.closest('.mobile-menu-btn')) {
+    sb.classList.remove('mobile-open');
+  }
+});
+
+// Socket.IO
+{% if current_user.is_authenticated %}
+const socket = io();
+socket.on('activity', (data) => {
+  const feed = document.getElementById('activity-feed');
+  if (!feed) return;
+  const el = document.createElement('div');
+  el.className = 'activity-item flex items-start gap-2.5 py-2.5 border-b border-white/5 last:border-0';
+  const dot = data.type === 'application' ? 'bg-blue-500' : data.type === 'hire' ? 'bg-emerald-500' : 'bg-slate-600';
+  el.innerHTML = `
+    <span class="mt-1.5 w-2 h-2 rounded-full ${dot} flex-shrink-0"></span>
+    <div>
+      <p class="text-xs text-slate-300">${data.message}</p>
+      <p class="text-[10px] text-slate-600 mt-0.5">${new Date(data.timestamp).toLocaleTimeString()}</p>
+    </div>`;
+  feed.prepend(el);
+  if (feed.children.length > 20) feed.removeChild(feed.lastChild);
+});
+
+socket.on('notification', (data) => {
+  const dot = document.getElementById('notif-dot');
+  if (dot) dot.classList.remove('hidden');
+  showToast(data.message, data.status);
+});
+{% endif %}
+
+function openSlideOver(html) {
+  document.getElementById('slide-over-body').innerHTML = html;
+  document.getElementById('slide-over').classList.add('open');
+  document.getElementById('slide-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeSlideOver() {
+  document.getElementById('slide-over').classList.remove('open');
+  document.getElementById('slide-overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function showToast(msg, type='info') {
+  const t = document.createElement('div');
+  const color = type === 'success' ? 'border-emerald-500/30 text-emerald-400' : 'border-blue-500/30 text-blue-400';
+  t.className = `fixed bottom-5 right-5 z-50 glass px-4 py-3 rounded-xl text-sm font-medium ${color} shadow-2xl`;
+  t.style.animation = 'slideIn 0.3s ease';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// Animate score rings on load
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-score]').forEach(el => {
+    const score = parseFloat(el.dataset.score);
+    const circumference = 2 * Math.PI * 28;
+    const offset = circumference - (score / 100) * circumference;
+    const ring = el.querySelector('.score-ring');
+    if (ring) {
+      ring.style.strokeDasharray = circumference;
+      ring.style.strokeDashoffset = circumference;
+      requestAnimationFrame(() => { ring.style.strokeDashoffset = offset; });
+    }
+  });
+});
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

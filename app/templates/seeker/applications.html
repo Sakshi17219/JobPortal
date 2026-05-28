@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}My Applications — JobPortal{% endblock %}
+{% block breadcrumb %}<span class="text-xs text-slate-500">My Applications</span>{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-xl font-semibold text-white">My Applications</h1>
+    <p class="text-sm text-slate-500 mt-0.5">{{ applications|length }} applications total</p>
+  </div>
+
+  {% if applications %}
+  <div class="space-y-4">
+    {% for app in applications %}
+    <div class="glass-card rounded-xl p-5">
+      <div class="flex items-start justify-between gap-4 mb-4">
+        <div>
+          <h3 class="text-sm font-semibold text-white">{{ app.job.title }}</h3>
+          <p class="text-xs text-slate-500 mt-0.5">{{ app.job.company }} · {{ app.job.location }}</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="text-right">
+            <p class="text-[10px] text-slate-600">Match Score</p>
+            <p class="text-base font-bold {% if app.match_score >= 70 %}text-emerald-400{% else %}text-blue-400{% endif %}">{{ app.match_score|int }}%</p>
+          </div>
+          {% if app.status == 'hired' %}
+          <span class="badge badge-green">Hired</span>
+          {% elif app.status == 'interview' %}
+          <span class="badge badge-yellow">Interview</span>
+          {% elif app.status == 'rejected' %}
+          <span class="badge badge-red">Rejected</span>
+          {% else %}
+          <span class="badge badge-blue">Applied</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Status stepper -->
+      {% if app.status != 'rejected' %}
+      <div class="flex items-center gap-0">
+        {% set steps = [('applied','Applied'),('interview','Interview'),('hired','Hired')] %}
+        {% for step_key, step_label in steps %}
+        {% set is_active = app.status == step_key %}
+        {% set is_done = (app.status == 'interview' and step_key == 'applied') or (app.status == 'hired' and step_key in ['applied','interview']) %}
+
+        <div class="flex items-center">
+          <div class="flex flex-col items-center">
+            <div class="w-3 h-3 rounded-full flex items-center justify-center
+              {% if is_active %}bg-blue-500 shadow-[0_0_0_4px_rgba(49,130,206,0.2)]
+              {% elif is_done %}bg-emerald-500
+              {% else %}bg-slate-700{% endif %}">
+              {% if is_done %}
+              <svg width="6" height="6" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              {% endif %}
+            </div>
+            <span class="text-[10px] mt-1 {% if is_active %}text-blue-400 font-semibold{% elif is_done %}text-emerald-400{% else %}text-slate-600{% endif %}">{{ step_label }}</span>
+          </div>
+          {% if not loop.last %}
+          <div class="w-24 h-px mb-3 {% if is_done %}bg-emerald-600{% else %}bg-slate-700{% endif %}"></div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <p class="text-[10px] text-slate-600 mt-3">Applied {{ app.applied_at.strftime('%B %d, %Y') }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-center py-20 glass-card rounded-2xl">
+    <svg class="mx-auto mb-4 text-slate-700" width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <p class="text-slate-500 text-sm">No applications yet.</p>
+    <a href="{{ url_for('main.job_list') }}" class="btn-primary mt-4 inline-flex">Browse Jobs</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

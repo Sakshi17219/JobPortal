@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — JobPortal{% endblock %}
+{% block breadcrumb %}
+<span class="text-xs text-slate-500">Dashboard</span>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-2xl font-semibold text-white">Good to see you, {{ current_user.username }} 👋</h1>
+    <p class="text-sm text-slate-500 mt-1">Here are your personalized job matches based on your skills.</p>
+  </div>
+
+  <!-- Stats row -->
+  <div class="grid grid-cols-3 gap-4 mb-8">
+    <div class="glass-card rounded-xl p-5">
+      <p class="text-xs text-slate-500 font-medium uppercase tracking-wider mb-2">Applications</p>
+      <p class="text-3xl font-bold text-white">{{ applications|length }}</p>
+    </div>
+    <div class="glass-card rounded-xl p-5">
+      <p class="text-xs text-slate-500 font-medium uppercase tracking-wider mb-2">Interviews</p>
+      <p class="text-3xl font-bold text-white">{{ applications|selectattr('status','eq','interview')|list|length }}</p>
+    </div>
+    <div class="glass-card rounded-xl p-5">
+      <p class="text-xs text-slate-500 font-medium uppercase tracking-wider mb-2">Hired</p>
+      <p class="text-3xl font-bold text-emerald-400">{{ applications|selectattr('status','eq','hired')|list|length }}</p>
+    </div>
+  </div>
+
+  <!-- Skills tags -->
+  {% if user_skills %}
+  <div class="mb-6 flex items-center gap-2 flex-wrap">
+    <span class="text-xs text-slate-500 font-medium">Your skills:</span>
+    {% for skill in user_skills %}
+    <span class="badge badge-blue">{{ skill }}</span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Recommended Jobs -->
+  <div class="mb-2 flex items-center justify-between">
+    <h2 class="text-base font-semibold text-white flex items-center gap-2">
+      <svg width="16" height="16" fill="none" stroke="#3182ce" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      AI-Recommended Jobs
+    </h2>
+    <a href="{{ url_for('main.job_list') }}" class="text-xs text-blue-400 hover:text-blue-300">View all →</a>
+  </div>
+  <p class="text-xs text-slate-600 mb-5">Ranked by match score using your skill profile</p>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
+    {% for job, score in recommended %}
+    <div class="glass-card rounded-xl p-5 cursor-pointer" onclick="loadJobSlider({{ job.id }})">
+      <!-- Score ring -->
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <h3 class="text-sm font-semibold text-white leading-snug">{{ job.title }}</h3>
+          <p class="text-xs text-slate-500 mt-0.5">{{ job.company }}</p>
+        </div>
+        <div data-score="{{ score }}" class="flex-shrink-0">
+          <svg width="52" height="52" viewBox="0 0 64 64">
+            <circle cx="32" cy="32" r="28" fill="none" stroke="#1e293b" stroke-width="5"/>
+            <circle cx="32" cy="32" r="28" fill="none"
+              stroke="{% if score >= 70 %}#10b981{% elif score >= 40 %}#3182ce{% else %}#475569{% endif %}"
+              stroke-width="5" stroke-linecap="round"
+              transform="rotate(-90 32 32)"
+              class="score-ring"/>
+            <text x="32" y="37" text-anchor="middle" fill="white" font-size="12" font-weight="600" font-family="DM Sans">{{ score|int }}%</text>
+          </svg>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 text-xs text-slate-500 mb-3">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        {{ job.location }} &nbsp;·&nbsp;
+        <span class="badge badge-gray">{{ job.job_type }}</span>
+      </div>
+      {% if job.salary_min %}
+      <p class="text-xs text-emerald-400 font-medium mb-3">${{ '{:,}'.format(job.salary_min) }} – ${{ '{:,}'.format(job.salary_max) }}</p>
+      {% endif %}
+      <div class="flex flex-wrap gap-1">
+        {% for tag in job.get_tags()[:3] %}
+        <span class="badge badge-gray">{{ tag }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <div class="col-span-3 text-center py-12 text-slate-600 text-sm">
+      No jobs yet. <a href="{{ url_for('main.job_list') }}" class="text-blue-400">Browse all →</a>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Application Tracker -->
+  {% if applications %}
+  <h2 class="text-base font-semibold text-white mb-4">Application Tracker</h2>
+  <div class="space-y-3">
+    {% for app in applications[:5] %}
+    <div class="glass-card rounded-xl p-4 flex items-center gap-4">
+      <div class="flex-1">
+        <p class="text-sm font-medium text-white">{{ app.job.title }}</p>
+        <p class="text-xs text-slate-500">{{ app.job.company }}</p>
+      </div>
+      <!-- Status stepper -->
+      <div class="flex items-center gap-2">
+        {% set steps = [('applied','Applied'),('interview','Interview'),('hired','Hired')] %}
+        {% for step_key, step_label in steps %}
+        {% set is_active = app.status == step_key %}
+        {% set is_done = (app.status == 'interview' and step_key == 'applied') or (app.status == 'hired' and step_key in ['applied','interview']) %}
+        <div class="flex items-center gap-1.5">
+          <div class="flex flex-col items-center">
+            <div class="step-dot w-2.5 h-2.5 rounded-full {% if is_active %}bg-blue-500 shadow-[0_0_0_3px_rgba(49,130,206,0.2)]{% elif is_done %}bg-emerald-500{% else %}bg-slate-700{% endif %}"></div>
+          </div>
+          <span class="text-[10px] {% if is_active %}text-blue-400 font-medium{% elif is_done %}text-emerald-400{% else %}text-slate-600{% endif %}">{{ step_label }}</span>
+          {% if not loop.last %}<div class="w-6 h-px {% if is_done %}bg-emerald-600{% else %}bg-slate-700{% endif %}"></div>{% endif %}
+        </div>
+        {% endfor %}
+        {% if app.status == 'rejected' %}
+        <span class="badge badge-red ml-2">Rejected</span>
+        {% endif %}
+      </div>
+      <div class="text-right">
+        <p class="text-xs text-slate-500">Match</p>
+        <p class="text-sm font-semibold {% if app.match_score >= 70 %}text-emerald-400{% else %}text-blue-400{% endif %}">{{ app.match_score|int }}%</p>
+      </div>
+    </div>
+    {% endfor %}
+    {% if applications|length > 5 %}
+    <a href="{{ url_for('main.my_applications') }}" class="block text-center text-xs text-blue-400 py-2">View all {{ applications|length }} applications →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Job Slide-Over JS -->
+<script>
+function loadJobSlider(jobId) {
+  fetch(`/jobs/${jobId}`)
+    .then(r => r.text())
+    .then(html => {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const content = doc.getElementById('job-slide-content');
+      if (content) openSlideOver(content.innerHTML);
+      // Re-init score rings
+      setTimeout(() => {
+        document.querySelectorAll('[data-score]').forEach(el => {
+          const score = parseFloat(el.dataset.score);
+          const circumference = 2 * Math.PI * 28;
+          const offset = circumference - (score / 100) * circumference;
+          const ring = el.querySelector('.score-ring');
+          if (ring) { ring.style.strokeDasharray = circumference; ring.style.strokeDashoffset = offset; }
+        });
+      }, 100);
+    });
+}
+</script>
+{% endblock %}

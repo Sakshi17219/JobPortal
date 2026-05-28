@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}{{ job.title }} — JobPortal{% endblock %}
+{% block breadcrumb %}<span class="text-xs text-slate-500">{{ job.title }}</span>{% endblock %}
+
+{% block content %}
+<!-- This page can also be loaded standalone -->
+<div id="job-slide-content">
+  <div class="flex items-start justify-between mb-6">
+    <div>
+      <div class="flex items-center gap-2 mb-1">
+        <button onclick="closeSlideOver()" class="text-slate-500 hover:text-white transition-colors mr-1">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+        <h2 class="text-lg font-semibold text-white">{{ job.title }}</h2>
+      </div>
+      <p class="text-sm text-slate-400 ml-6">{{ job.company }} · {{ job.location }}</p>
+    </div>
+    <div data-score="{{ score }}" class="flex-shrink-0">
+      <svg width="64" height="64" viewBox="0 0 64 64">
+        <circle cx="32" cy="32" r="28" fill="none" stroke="#1e293b" stroke-width="5"/>
+        <circle cx="32" cy="32" r="28" fill="none"
+          stroke="{% if score >= 70 %}#10b981{% elif score >= 40 %}#3182ce{% else %}#475569{% endif %}"
+          stroke-width="5" stroke-linecap="round"
+          transform="rotate(-90 32 32)"
+          class="score-ring"/>
+        <text x="32" y="35" text-anchor="middle" fill="white" font-size="11" font-weight="600" font-family="DM Sans">{{ score|int }}%</text>
+        <text x="32" y="46" text-anchor="middle" fill="#64748b" font-size="8" font-family="DM Sans">match</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Meta badges -->
+  <div class="flex flex-wrap gap-2 mb-5 ml-6">
+    <span class="badge badge-gray">{{ job.job_type }}</span>
+    {% if job.salary_min %}
+    <span class="badge badge-green">${{ '{:,}'.format(job.salary_min) }} – ${{ '{:,}'.format(job.salary_max) }}</span>
+    {% endif %}
+    {% for tag in job.get_tags() %}
+    <span class="badge badge-blue">{{ tag }}</span>
+    {% endfor %}
+  </div>
+
+  <!-- Description -->
+  <div class="ml-6 mb-5">
+    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">About this role</h3>
+    <p class="text-sm text-slate-300 leading-relaxed">{{ job.description }}</p>
+  </div>
+
+  <!-- Requirements -->
+  {% if job.get_requirements() %}
+  <div class="ml-6 mb-6">
+    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Requirements</h3>
+    <ul class="space-y-1.5">
+      {% for req in job.get_requirements() %}
+      <li class="flex items-start gap-2 text-sm text-slate-300">
+        <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0"></span>
+        {{ req }}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <!-- Apply -->
+  <div class="ml-6 border-t border-white/5 pt-5">
+    {% if existing %}
+    <div class="flex items-center gap-2 text-sm text-emerald-400">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      Applied on {{ existing.applied_at.strftime('%b %d, %Y') }} · Status: <span class="font-medium capitalize">{{ existing.status }}</span>
+    </div>
+    {% else %}
+    <p class="text-xs text-slate-500 mb-3">Add an optional cover letter, then apply.</p>
+    <textarea id="cover-letter" rows="3" placeholder="Why are you a great fit? (optional)" class="input-field mb-3 resize-none text-sm"></textarea>
+    <button onclick="applyJob({{ job.id }})" class="btn-primary w-full justify-center">
+      Apply Now
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function applyJob(jobId) {
+  const cover = document.getElementById('cover-letter')?.value || '';
+  fetch(`/jobs/${jobId}/apply`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: `cover_letter=${encodeURIComponent(cover)}`
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      closeSlideOver();
+      showToast(`Applied! Match score: ${data.score}%`, 'success');
+    } else {
+      showToast(data.message || 'Error', 'error');
+    }
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — JobPortal{% endblock %}
+{% block breadcrumb %}<span class="text-xs text-slate-500">Admin / Dashboard</span>{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+
+  <div class="mb-7 flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-white">Admin Dashboard</h1>
+      <p class="text-sm text-slate-500 mt-0.5">Manage jobs and track applications in real time.</p>
+    </div>
+    <a href="{{ url_for('main.new_job') }}" class="btn-primary">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+      Post Job
+    </a>
+  </div>
+
+  <!-- Stats row -->
+  <div class="grid grid-cols-3 gap-4 mb-8">
+    <div class="glass-card rounded-xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Active Jobs</p>
+        <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+          <svg width="14" height="14" fill="none" stroke="#3182ce" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+        </div>
+      </div>
+      <p class="text-3xl font-bold text-white">{{ total_jobs }}</p>
+    </div>
+    <div class="glass-card rounded-xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Candidates</p>
+        <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+          <svg width="14" height="14" fill="none" stroke="#3182ce" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+      </div>
+      <p class="text-3xl font-bold text-white">{{ total_users }}</p>
+    </div>
+    <div class="glass-card rounded-xl p-5">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-xs text-slate-500 font-medium uppercase tracking-wider">Applications</p>
+        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+          <svg width="14" height="14" fill="none" stroke="#10b981" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+      </div>
+      <p class="text-3xl font-bold text-white">{{ total_apps }}</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-3 gap-5">
+    <!-- Left: Applications table -->
+    <div class="col-span-2">
+      <h2 class="text-sm font-semibold text-white mb-3">Recent Applications</h2>
+      <div class="glass-card rounded-xl overflow-hidden">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-white/5">
+              <th class="text-left px-4 py-3 text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Candidate</th>
+              <th class="text-left px-4 py-3 text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Job</th>
+              <th class="text-left px-4 py-3 text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Score</th>
+              <th class="text-left px-4 py-3 text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Status</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for app in recent_apps %}
+            <tr class="border-b border-white/5 last:border-0 hover:bg-white/3 transition-colors">
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-[10px] font-bold text-white">
+                    {{ app.user.username[0].upper() }}
+                  </div>
+                  <span class="text-xs text-slate-300">{{ app.user.username }}</span>
+                </div>
+              </td>
+              <td class="px-4 py-3 text-xs text-slate-300">{{ app.job.title }}</td>
+              <td class="px-4 py-3">
+                <span class="text-xs font-semibold {% if app.match_score >= 70 %}text-emerald-400{% else %}text-blue-400{% endif %}">{{ app.match_score|int }}%</span>
+              </td>
+              <td class="px-4 py-3">
+                <select onchange="updateStatus({{ app.id }}, this.value)"
+                  class="text-[11px] bg-transparent border border-white/10 rounded-md px-2 py-1 text-slate-300 cursor-pointer
+                  {% if app.status == 'hired' %}border-emerald-500/30 text-emerald-400
+                  {% elif app.status == 'interview' %}border-yellow-500/30 text-yellow-400
+                  {% elif app.status == 'rejected' %}border-red-500/30 text-red-400
+                  {% endif %}">
+                  <option value="applied" {% if app.status=='applied' %}selected{% endif %}>Applied</option>
+                  <option value="interview" {% if app.status=='interview' %}selected{% endif %}>Interview</option>
+                  <option value="hired" {% if app.status=='hired' %}selected{% endif %}>Hired</option>
+                  <option value="rejected" {% if app.status=='rejected' %}selected{% endif %}>Rejected</option>
+                </select>
+              </td>
+              <td class="px-4 py-3 text-[10px] text-slate-600">{{ app.applied_at.strftime('%b %d') }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="px-4 py-8 text-center text-slate-600 text-xs">No applications yet.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Job list -->
+      <h2 class="text-sm font-semibold text-white mt-6 mb-3">Active Job Listings</h2>
+      <div class="space-y-2">
+        {% for job in jobs %}
+        <div class="glass-card rounded-xl px-4 py-3 flex items-center gap-3">
+          <div class="flex-1">
+            <p class="text-sm font-medium text-white">{{ job.title }}</p>
+            <p class="text-xs text-slate-500">{{ job.company }} · {{ job.location }}</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="badge badge-gray">{{ job.job_type }}</span>
+            <span class="text-xs text-slate-600">{{ job.applications|length }} apps</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Right: Real-time activity feed -->
+    <div>
+      <h2 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        Live Activity
+      </h2>
+      <div class="glass-card rounded-xl p-4 h-96 overflow-y-auto">
+        <div id="activity-feed" class="space-y-0">
+          <div class="activity-item flex items-start gap-2.5 py-2.5 border-b border-white/5">
+            <span class="mt-1.5 w-2 h-2 rounded-full bg-slate-600 flex-shrink-0"></span>
+            <div>
+              <p class="text-xs text-slate-400">Waiting for activity…</p>
+              <p class="text-[10px] text-slate-600 mt-0.5">Connect job seekers to see live events</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seed activity for demo -->
+      <button onclick="seedActivity()" class="btn-ghost w-full justify-center mt-3 text-xs">
+        Simulate Activity
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+socket.emit('join_admin');
+
+function updateStatus(appId, status) {
+  fetch(`/admin/applications/${appId}/status`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ status })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) showToast('Status updated', 'success');
+  });
+}
+
+function seedActivity() {
+  const events = [
+    { type: 'application', message: 'Alex applied to Senior Backend Engineer' },
+    { type: 'application', message: 'Jordan applied to ML Engineer at OpenAI' },
+    { type: 'hire', message: 'Sam was hired as Full-Stack Developer at Vercel' },
+    { type: 'application', message: 'Taylor applied to DevOps Engineer at HashiCorp' },
+    { type: 'system', message: 'New job posted: Senior Data Analyst' },
+  ];
+  let i = 0;
+  const tick = () => {
+    if (i >= events.length) return;
+    const feed = document.getElementById('activity-feed');
+    const ev = events[i++];
+    const el = document.createElement('div');
+    el.className = 'activity-item flex items-start gap-2.5 py-2.5 border-b border-white/5 last:border-0';
+    const dot = ev.type === 'application' ? 'bg-blue-500' : ev.type === 'hire' ? 'bg-emerald-500' : 'bg-slate-600';
+    el.innerHTML = `<span class="mt-1.5 w-2 h-2 rounded-full ${dot} flex-shrink-0"></span>
+      <div><p class="text-xs text-slate-300">${ev.message}</p>
+      <p class="text-[10px] text-slate-600 mt-0.5">${new Date().toLocaleTimeString()}</p></div>`;
+    feed.prepend(el);
+    setTimeout(tick, 800);
+  };
+  tick();
+}
+</script>
+{% endblock %}
